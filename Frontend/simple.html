@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin IPO Dashboard</title>
+</head>
+<body>
+  <h1>IPO Listings</h1>
+  <form id="add-ipo-form">
+    <input type="text" id="ipo-name" placeholder="IPO Name" required>
+    <button type="submit">Add IPO</button>
+  </form>
+  <h2>Upcoming IPOs</h2>
+  <ul id="ipo-list"></ul>
+
+  <script>
+    const apiUrl = 'http://localhost:3000/admin/ipos';
+
+    // Fetch and display IPOs
+    async function fetchIPOs() {
+      const res = await fetch(apiUrl);
+      const ipos = await res.json();
+      const list = document.getElementById('ipo-list');
+      list.innerHTML = '';
+      ipos.forEach(ipo => {
+        const li = document.createElement('li');
+        li.textContent = `${ipo.name} - Status: ${ipo.status} - Approved: ${ipo.approved}`;
+        // Approve button
+        if (!ipo.approved) {
+          const approveBtn = document.createElement('button');
+          approveBtn.textContent = 'Approve';
+          approveBtn.onclick = async () => {
+            await fetch(`${apiUrl}/${ipo.id}/approve`, { method: 'PATCH' });
+            fetchIPOs();
+          };
+          li.appendChild(approveBtn);
+        }
+        // Change status button
+        if (ipo.status === 'upcoming' && ipo.approved) {
+          const launchBtn = document.createElement('button');
+          launchBtn.textContent = 'Launch';
+          launchBtn.onclick = async () => {
+            await fetch(`${apiUrl}/${ipo.id}/status`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ status: 'launched' })
+            });
+            fetchIPOs();
+          };
+          li.appendChild(launchBtn);
+        }
+        // Delete button
+        const delBtn = document.createElement('button');
+        delBtn.textContent = 'Delete';
+        delBtn.onclick = async () => {
+          await fetch(`${apiUrl}/${ipo.id}`, { method: 'DELETE' });
+          fetchIPOs();
+        };
+        li.appendChild(delBtn);
+
+        list.appendChild(li);
+      });
+    }
+
+    // Add IPO
+    document.getElementById('add-ipo-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('ipo-name').value;
+      await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+      document.getElementById('ipo-name').value = '';
+      fetchIPOs();
+    };
+
+    fetchIPOs();
+  </script>
+</body>
+</html>
